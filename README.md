@@ -40,16 +40,12 @@ Basic usage examples:
 
 ```shell
 # Create a bridge with a specific name and subnet
+# The `--disable-tx-offload` flag disables TCP segmentation offloading (TSO) on the bridge,
+# which can improve compatibility with some virtual machines or network devices.
 ./network-utils create-bridge --name br0 --cidr 192.168.26.0/24 --disable-tx-offload
 
-# The `--disable-tx-offload` flag disables TCP segmentation offloading (TSO) on the bridge, 
-# which can improve compatibility with certain virtualized environments or devices that 
 # Attach the bridge to a host network interface (e.g., `eth0` for Ethernet or `wlan0` for Wi-Fi)
-./network-utils configure-bridge --name br0 --hostIf eth0
-./network-utils create-bridge --name br0 --cidr 192.168.26.0/24 --disable-tx-offload
-
-# Attach the bridge to a host network interface
-./network-utils configure-bridge --name br0 --hostIf <host-interface>
+./network-utils configure-bridge --name br0 --hostIf wlan0
 
 # Create a TAP interface and add it to the bridge
 ./network-utils create-tap --name tap0 --bridge br0
@@ -65,3 +61,13 @@ qemu-system-x86_64 -machine q35 -accel kvm -m 960 -nographic \
 ```
 
 After starting the VM, it will have internet access and be reachable from the host.
+
+## Tests
+
+To run the tests, use the following command:
+
+```shell
+go test -v ./... | go tool github.com/jstemmer/go-junit-report
+```
+
+This command executes all tests in the project and generates JUnit XML output.
