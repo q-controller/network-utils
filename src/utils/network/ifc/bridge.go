@@ -9,28 +9,9 @@ import (
 	"log/slog"
 	"net"
 	"syscall"
+
+	"github.com/q-controller/network-utils/src/utils/network/address"
 )
-
-func getFirstUsableIP(ipNet *net.IPNet) net.IP {
-	if ipNet == nil {
-		return nil
-	}
-	// Start with the network address
-	firstIP := ipNet.IP
-
-	// Create a copy to avoid modifying the original
-	firstUsable := make(net.IP, len(firstIP))
-	copy(firstUsable, firstIP)
-
-	for i := len(firstUsable) - 1; i >= 0; i-- {
-		firstUsable[i]++
-		if firstUsable[i] != 0 {
-			break
-		}
-	}
-
-	return firstUsable
-}
 
 func CreateBridgeWithManager(mgr LinkManager, name string, subnet string, disableTxOffloading bool) error {
 	_, ipnet, ipErr := net.ParseCIDR(subnet)
@@ -38,7 +19,7 @@ func CreateBridgeWithManager(mgr LinkManager, name string, subnet string, disabl
 		return fmt.Errorf("failed to parse subnet %s: %v", subnet, ipErr)
 	}
 
-	ip := getFirstUsableIP(ipnet)
+	ip := address.GetFirstUsableIP(ipnet)
 	if ip == nil {
 		return fmt.Errorf("failed to get first usable IP")
 	}
