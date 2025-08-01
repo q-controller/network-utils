@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/krjakbrjak/network-utils/src/utils/network/ifc"
+	"github.com/q-controller/network-utils/src/utils/network/ifc"
 	"github.com/spf13/cobra"
 )
 
