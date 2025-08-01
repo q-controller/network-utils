@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/krjakbrjak/network-utils/src/utils/network/firewall"
+	"github.com/q-controller/network-utils/src/utils/network/firewall"
 	"github.com/spf13/cobra"
 )
 

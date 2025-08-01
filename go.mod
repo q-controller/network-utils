@@ -1,4 +1,4 @@
-module github.com/krjakbrjak/network-utils
+module github.com/q-controller/network-utils
 
 go 1.24.3
 

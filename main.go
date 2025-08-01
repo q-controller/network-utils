@@ -1,6 +1,6 @@
 package main
 
-import "github.com/krjakbrjak/network-utils/cmd"
+import "github.com/q-controller/network-utils/cmd"
 
 func main() {
 	cmd.Execute()
