@@ -72,9 +72,6 @@ func PortRule(port uint16, proto, chainName, tableName string) NewRule {
 					Offset:       12, // src IP offset (IPv4)
 					Len:          4,
 				},
-				// [ cmp eq reg 1 subnet? ]
-				// nftables does not have direct subnet check here, normally use sets or ip saddr match
-				// For simplicity here, just accept any source, real use would require sets or more complex matching
 				&expr.Verdict{Kind: expr.VerdictAccept},
 			},
 		}
