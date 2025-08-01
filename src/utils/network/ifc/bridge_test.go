@@ -131,3 +131,12 @@ func TestCreateBridgeWithManager_InvalidSubnet(t *testing.T) {
 	err := CreateBridgeWithManager(mgr, "br0", "invalid-subnet", false)
 	require.Error(t, err)
 }
+
+func TestCreateBridgeWithManager_NilUsableIP(t *testing.T) {
+	mgr := &LinkManagerMock{}
+	mgr.On("AddLink", "br0", LinkTypeBridge).Return(nil)
+	mgr.On("SetIP", "br0", mock.Anything, mock.Anything).Return(nil)
+	mgr.On("BringUp", "br0").Return(nil)
+	err := CreateBridgeWithManager(mgr, "br0", "0.0.0.0/32", false)
+	require.Error(t, err)
+}
