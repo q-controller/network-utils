@@ -5,7 +5,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// createTapCmd represents the create-tap command
 var createTapCmd = &cobra.Command{
 	Use:   "create-tap",
 	Short: "Creates a tap device",
