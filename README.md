@@ -40,8 +40,7 @@ Basic usage examples:
 
 ```shell
 # Create a bridge with a specific name and subnet
-# The `--disable-tx-offload` flag disables TCP segmentation offloading (TSO) on the bridge,
-# which can improve compatibility with some virtual machines or network devices.
+# The `--disable-tx-offload` flag disables TX Checksum Offload.
 ./network-utils create-bridge --name br0 --cidr 192.168.26.0/24 --disable-tx-offload
 
 # Attach the bridge to a host network interface (e.g., `eth0` for Ethernet or `wlan0` for Wi-Fi)

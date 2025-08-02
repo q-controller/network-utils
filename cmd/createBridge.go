@@ -5,7 +5,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// createBridgeCmd represents the create-bridge command
 var createBridgeCmd = &cobra.Command{
 	Use:   "create-bridge",
 	Short: "Creates a network bridge",
