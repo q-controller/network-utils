@@ -1,3 +1,5 @@
+![Build and Test Go Project](https://github.com/q-controller/network-utils/actions/workflows/test.yml/badge.svg)
+
 # Network Utilities
 A set of tools for easily creating network bridges and TAP interfaces, with a focus on configuring bridge networking to enable seamless communication between devices (TAP), the host, and the internet. Internally, the tool uses `nftables` for firewall and NAT configuration, as `iptables` is deprecated and superseded by `nftables` in modern Linux systems due to its improved performance, scalability, and better integration with modern Linux kernels.
 
