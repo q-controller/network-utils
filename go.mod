@@ -1,6 +1,6 @@
 module github.com/q-controller/network-utils
 
-go 1.24.3
+go 1.24.6
 
 require (
 	github.com/google/nftables v0.3.0
