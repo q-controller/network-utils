@@ -4,25 +4,32 @@
 package firewall
 
 func ConfigureFirewall(oldInterface, newInterface, bridgeName string) error {
-	if jumpErr := AddJumpRule("FORWARD", "QEMU-FORWARD", "filter"); jumpErr != nil {
+	conn := getConnection()
+	if err := CreateStandardFilterTable(conn); err != nil {
+		return err
+	}
+	if err := CreateStandardNATTable(conn); err != nil {
+		return err
+	}
+	if jumpErr := AddJumpRule("FORWARD", "QEMU-FORWARD", FilterTable); jumpErr != nil {
 		return jumpErr
 	}
 
-	if jumpErr := AddJumpRule("INPUT", "QEMU-INPUT", "filter"); jumpErr != nil {
+	if jumpErr := AddJumpRule("INPUT", "QEMU-INPUT", FilterTable); jumpErr != nil {
 		return jumpErr
 	}
 
 	if oldInterface != "" {
 		rules, rulesErr := NewRules(
-			ForwardOutboundRule("QEMU-FORWARD", "filter", oldInterface, bridgeName),
-			ForwardReturnTrafficRule("QEMU-FORWARD", "filter", oldInterface, bridgeName),
-			MasqueradeRule("POSTROUTING", "nat", oldInterface),
-			PortRule(53, "udp", "QEMU-INPUT", "filter"),
-			PortRule(67, "udp", "QEMU-INPUT", "filter"),
-			PortRule(68, "udp", "QEMU-INPUT", "filter"),
-			PortRule(53, "tcp", "QEMU-INPUT", "filter"),
-			PortRule(67, "tcp", "QEMU-INPUT", "filter"),
-			PortRule(68, "tcp", "QEMU-INPUT", "filter"),
+			ForwardOutboundRule("QEMU-FORWARD", FilterTable, oldInterface, bridgeName),
+			ForwardReturnTrafficRule("QEMU-FORWARD", FilterTable, oldInterface, bridgeName),
+			MasqueradeRule(PostRoutingChain, NATTable, oldInterface),
+			PortRule(53, "udp", "QEMU-INPUT", FilterTable),
+			PortRule(67, "udp", "QEMU-INPUT", FilterTable),
+			PortRule(68, "udp", "QEMU-INPUT", FilterTable),
+			PortRule(53, "tcp", "QEMU-INPUT", FilterTable),
+			PortRule(67, "tcp", "QEMU-INPUT", FilterTable),
+			PortRule(68, "tcp", "QEMU-INPUT", FilterTable),
 		)
 		if rulesErr != nil {
 			return rulesErr
@@ -34,15 +41,15 @@ func ConfigureFirewall(oldInterface, newInterface, bridgeName string) error {
 
 	if newInterface != "" {
 		rules, rulesErr := NewRules(
-			ForwardOutboundRule("QEMU-FORWARD", "filter", newInterface, bridgeName),
-			ForwardReturnTrafficRule("QEMU-FORWARD", "filter", newInterface, bridgeName),
-			MasqueradeRule("POSTROUTING", "nat", newInterface),
-			PortRule(53, "udp", "QEMU-INPUT", "filter"),
-			PortRule(67, "udp", "QEMU-INPUT", "filter"),
-			PortRule(68, "udp", "QEMU-INPUT", "filter"),
-			PortRule(53, "tcp", "QEMU-INPUT", "filter"),
-			PortRule(67, "tcp", "QEMU-INPUT", "filter"),
-			PortRule(68, "tcp", "QEMU-INPUT", "filter"),
+			ForwardOutboundRule("QEMU-FORWARD", FilterTable, newInterface, bridgeName),
+			ForwardReturnTrafficRule("QEMU-FORWARD", FilterTable, newInterface, bridgeName),
+			MasqueradeRule(PostRoutingChain, NATTable, newInterface),
+			PortRule(53, "udp", "QEMU-INPUT", FilterTable),
+			PortRule(67, "udp", "QEMU-INPUT", FilterTable),
+			PortRule(68, "udp", "QEMU-INPUT", FilterTable),
+			PortRule(53, "tcp", "QEMU-INPUT", FilterTable),
+			PortRule(67, "tcp", "QEMU-INPUT", FilterTable),
+			PortRule(68, "tcp", "QEMU-INPUT", FilterTable),
 		)
 		if rulesErr != nil {
 			return rulesErr
