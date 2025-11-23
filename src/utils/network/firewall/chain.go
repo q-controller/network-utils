@@ -13,6 +13,11 @@ type ChainConfig struct {
 	Name   string
 	Table  string
 	Create bool
+	// Rich configuration options (optional - for creating new chains)
+	Type     *nftables.ChainType
+	Hook     *nftables.ChainHook
+	Priority *nftables.ChainPriority
+	Policy   *nftables.ChainPolicy
 }
 
 type Option func(*ChainConfig)
@@ -54,6 +59,21 @@ func NewChain(opts ...Option) (*nftables.Chain, *nftables.Table, error) {
 					Name:  config.Name,
 					Table: table,
 				}
+
+				// Apply rich configuration if provided
+				if config.Type != nil {
+					customChain.Type = *config.Type
+				}
+				if config.Hook != nil {
+					customChain.Hooknum = config.Hook
+				}
+				if config.Priority != nil {
+					customChain.Priority = config.Priority
+				}
+				if config.Policy != nil {
+					customChain.Policy = config.Policy
+				}
+
 				customChain = conn.AddChain(customChain)
 				if err := conn.Flush(); err != nil {
 					return nil, nil, err
@@ -83,5 +103,31 @@ func WithinTable(tableName string) Option {
 func Create() Option {
 	return func(config *ChainConfig) {
 		config.Create = true // This option indicates that the chain should be created if it does not already exists
+	}
+}
+
+// Rich configuration options for creating new chains
+
+func WithChainType(chainType nftables.ChainType) Option {
+	return func(config *ChainConfig) {
+		config.Type = &chainType
+	}
+}
+
+func WithHook(hook *nftables.ChainHook) Option {
+	return func(config *ChainConfig) {
+		config.Hook = hook
+	}
+}
+
+func WithPriority(priority *nftables.ChainPriority) Option {
+	return func(config *ChainConfig) {
+		config.Priority = priority
+	}
+}
+
+func WithPolicy(policy *nftables.ChainPolicy) Option {
+	return func(config *ChainConfig) {
+		config.Policy = policy
 	}
 }
