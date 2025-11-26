@@ -37,8 +37,9 @@ func (NetlinkBridgeManager) SetIP(name string, ip net.IP, mask net.IPMask) error
 	if linkErr != nil {
 		return linkErr
 	}
+
 	addr := &netlink.Addr{IPNet: &net.IPNet{IP: ip, Mask: mask}}
-	return netlink.AddrAdd(link, addr)
+	return netlink.AddrReplace(link, addr)
 }
 
 func (NetlinkBridgeManager) Exists(name string) (bool, error) {
