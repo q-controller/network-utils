@@ -18,5 +18,5 @@ func SetDefaultRoute(iface string, gatewayIp net.IP) error {
 		LinkIndex: link.Attrs().Index,
 	}
 
-	return netlink.RouteAdd(route)
+	return netlink.RouteReplace(route)
 }

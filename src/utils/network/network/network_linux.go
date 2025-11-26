@@ -117,10 +117,12 @@ func NewNetwork(opts ...NetworkOption) (Network, error) {
 		PeerNamespace: netlink.NsFd(nsFd),
 	}
 
-	if err := netlink.LinkAdd(link); err != nil {
-		// Clean up namespace on veth creation failure
-		deleteNamespace(config.Name)
-		return nil, err
+	if addErr := netlink.LinkAdd(link); addErr != nil {
+		if !errors.Is(addErr, unix.EEXIST) {
+			// Clean up namespace on veth creation failure
+			deleteNamespace(config.Name)
+			return nil, addErr
+		}
 	}
 
 	// Configure host side of veth pair
