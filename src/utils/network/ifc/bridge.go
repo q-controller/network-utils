@@ -9,19 +9,16 @@ import (
 	"log/slog"
 	"net"
 	"syscall"
-
-	"github.com/q-controller/network-utils/src/utils/network/address"
 )
 
-func CreateBridgeWithManager(mgr LinkManager, name string, subnet string, disableTxOffloading bool) error {
-	_, ipnet, ipErr := net.ParseCIDR(subnet)
+func CreateBridgeWithManager(mgr LinkManager, name string, gatewayCidr string, disableTxOffloading bool) error {
+	ip, ipnet, ipErr := net.ParseCIDR(gatewayCidr)
 	if ipErr != nil {
-		return fmt.Errorf("failed to parse subnet %s: %v", subnet, ipErr)
+		return fmt.Errorf("invalid CIDR format: %v", ipErr)
 	}
 
-	ip := address.GetFirstUsableIP(ipnet)
 	if ip == nil {
-		return fmt.Errorf("failed to get first usable IP")
+		return fmt.Errorf("wrong IP address in CIDR: %s", gatewayCidr)
 	}
 
 	if addBridgeErr := mgr.AddLink(name, LinkTypeBridge); addBridgeErr != nil {
@@ -62,6 +59,6 @@ func CreateBridgeWithManager(mgr LinkManager, name string, subnet string, disabl
 	return nil
 }
 
-func CreateBridge(name string, subnet string, disableTxOffloading bool) error {
-	return CreateBridgeWithManager(NetlinkBridgeManager{}, name, subnet, disableTxOffloading)
+func CreateBridge(name string, gatewayCidr string, disableTxOffloading bool) error {
+	return CreateBridgeWithManager(NetlinkBridgeManager{}, name, gatewayCidr, disableTxOffloading)
 }
