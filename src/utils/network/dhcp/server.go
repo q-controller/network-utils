@@ -1,24 +1,32 @@
 package dhcp
 
 import (
+	"fmt"
+	"log/slog"
+	"os"
 	"sync"
 
 	"github.com/coredhcp/coredhcp/server"
 )
 
 type DHCPServer struct {
-	server   *server.Servers
-	done     chan struct{}
-	stop     chan struct{}
-	stopOnce sync.Once
+	server    *server.Servers
+	stopOnce  sync.Once
+	leaseFile string
 }
 
 func (ds *DHCPServer) Stop() {
 	ds.stopOnce.Do(func() {
-		close(ds.stop)
-	})
-}
+		defer func() {
+			if err := os.Remove(ds.leaseFile); err != nil {
+				slog.Info("Failed to remove lease file", "error", err)
+			}
+		}()
+		fmt.Println("Stopping DHCP server")
+		ds.server.Close()
 
-func (d *DHCPServer) Done() <-chan struct{} {
-	return d.done
+		if waitErr := ds.server.Wait(); waitErr != nil {
+			slog.Info("DHCP server error", "error", waitErr)
+		}
+	})
 }
