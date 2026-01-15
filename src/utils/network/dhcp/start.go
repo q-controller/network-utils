@@ -55,6 +55,7 @@ func StartDHCPServer(options ...DHCPOption) (*DHCPServer, error) {
 		dnsArgs[i] = ip.String()
 	}
 
+	leaseFileWithTimestamp := fmt.Sprintf("%s-%d", DHCPConfig.LeaseFile, time.Now().Unix())
 	cfg.Server4 = &config.ServerConfig{
 		Addresses: []net.UDPAddr{
 			{
@@ -64,7 +65,7 @@ func StartDHCPServer(options ...DHCPOption) (*DHCPServer, error) {
 		},
 		Plugins: []config.PluginConfig{
 			{Name: "server_id", Args: []string{DHCPConfig.Router.String()}},
-			{Name: "range", Args: []string{DHCPConfig.LeaseFile, start.String(), end.String(), DHCPConfig.LeaseTime.String()}},
+			{Name: "range", Args: []string{leaseFileWithTimestamp, start.String(), end.String(), DHCPConfig.LeaseTime.String()}},
 			{Name: "router", Args: []string{DHCPConfig.Router.String()}},
 			{Name: "dns", Args: dnsArgs},
 		},
@@ -76,21 +77,10 @@ func StartDHCPServer(options ...DHCPOption) (*DHCPServer, error) {
 	}
 
 	dhcpServer := &DHCPServer{
-		server:   srv,
-		done:     make(chan struct{}),
-		stop:     make(chan struct{}),
-		stopOnce: sync.Once{},
+		server:    srv,
+		stopOnce:  sync.Once{},
+		leaseFile: leaseFileWithTimestamp,
 	}
-
-	go func() {
-		defer close(dhcpServer.done)
-		<-dhcpServer.stop
-		dhcpServer.server.Close()
-
-		if waitErr := dhcpServer.server.Wait(); waitErr != nil {
-			log.Printf("DHCP server error: %v", waitErr)
-		}
-	}()
 
 	return dhcpServer, nil
 }
