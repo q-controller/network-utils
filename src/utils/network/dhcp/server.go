@@ -1,7 +1,6 @@
 package dhcp
 
 import (
-	"fmt"
 	"log/slog"
 	"os"
 	"sync"
@@ -22,7 +21,7 @@ func (ds *DHCPServer) Stop() {
 				slog.Info("Failed to remove lease file", "error", err)
 			}
 		}()
-		fmt.Println("Stopping DHCP server")
+		slog.Info("Stopping DHCP server")
 		ds.server.Close()
 
 		if waitErr := ds.server.Wait(); waitErr != nil {
