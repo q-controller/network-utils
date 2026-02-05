@@ -59,7 +59,6 @@ func SubscribeDefaultInterfaceChanges() (*InterfaceSubscription, error) {
 
 	go func() {
 		defer close(ifcCh)
-		defer close(updates)
 
 		currentDefaultInterface, defaultInterfaceErr := GetDefaultInterface()
 		if defaultInterfaceErr != nil {
