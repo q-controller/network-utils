@@ -12,13 +12,13 @@ import (
 	"github.com/miekg/dns"
 )
 
-type DNSForwarder struct {
+type DNSFailoverForwarder struct {
 	once sync.Once
 	udp  *dns.Server
 	tcp  *dns.Server
 }
 
-func (d *DNSForwarder) Stop() {
+func (d *DNSFailoverForwarder) Stop() {
 	d.once.Do(func() {
 		if err := d.udp.Shutdown(); err != nil {
 			slog.Error("Failed to shutdown UDP DNS server", "error", err)
@@ -29,33 +29,7 @@ func (d *DNSForwarder) Stop() {
 	})
 }
 
-type DNSForwarderConfig struct {
-	Address        string
-	Timeout        time.Duration
-	ResolvconfPath string
-}
-
-type DNSForwarderOption func(*DNSForwarderConfig)
-
-func WithForwarderTimeout(timeout time.Duration) DNSForwarderOption {
-	return func(cfg *DNSForwarderConfig) {
-		cfg.Timeout = timeout
-	}
-}
-
-func WithForwarderAddress(address string) DNSForwarderOption {
-	return func(cfg *DNSForwarderConfig) {
-		cfg.Address = address
-	}
-}
-
-func WithResolvconfPath(path string) DNSForwarderOption {
-	return func(cfg *DNSForwarderConfig) {
-		cfg.ResolvconfPath = path
-	}
-}
-
-func NewDNSForwarder(ctx context.Context, options ...DNSForwarderOption) (*DNSForwarder, error) {
+func NewDNSFailoverForwarder(ctx context.Context, options ...DNSForwarderOption) (DNSForwarder, error) {
 	filename := ResolvConfPath
 	if _, statErr := os.Stat(SystemdResolvConfPath); statErr == nil {
 		filename = SystemdResolvConfPath
@@ -109,7 +83,7 @@ func NewDNSForwarder(ctx context.Context, options ...DNSForwarderOption) (*DNSFo
 		}
 	}()
 
-	return &DNSForwarder{
+	return &DNSFailoverForwarder{
 		udp: udp,
 		tcp: tcp,
 	}, nil

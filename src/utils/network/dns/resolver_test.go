@@ -22,7 +22,7 @@ func TestDNSForwarder_Integration(t *testing.T) {
 	addr := ln.Addr().(*net.TCPAddr)
 	_ = ln.Close()
 	forwarderAddr := fmt.Sprintf("%s:%d", "127.0.0.1", addr.Port)
-	forwarder, err := NewDNSForwarder(ctx,
+	forwarder, err := NewDNSFailoverForwarder(ctx,
 		WithForwarderAddress(forwarderAddr),
 		WithForwarderTimeout(2*time.Second),
 		WithResolvconfPath("/etc/resolv.conf"),
