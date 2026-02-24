@@ -5,6 +5,6 @@ type Network interface {
 
 	Execute(func() error) error
 
-	Connect(hostIf string) error
-	Disconnect(hostIf string) error
+	Connect(iface string, masquerade bool) error
+	Disconnect(iface string, masquerade bool) error
 }
