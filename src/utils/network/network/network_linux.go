@@ -19,18 +19,15 @@ func netName(name string) string {
 	return name + "-net"
 }
 
-func getRulesForHostInterface(hostIf, hostLink string) (*firewall.Rules, error) {
-	rules, rulesErr := firewall.NewRules(
-		firewall.ForwardOutboundRule("FORWARD", "filter", hostIf, hostLink),
-		firewall.ForwardReturnTrafficRule("FORWARD", "filter", hostIf, hostLink),
-		firewall.MasqueradeRule("POSTROUTING", "nat", hostIf),
-	)
-
-	if rulesErr != nil {
-		return nil, rulesErr
+func getRulesForInterface(iface, hostLink string, masquerade bool) (*firewall.Rules, error) {
+	newRules := []firewall.NewRule{
+		firewall.ForwardOutboundRule("FORWARD", "filter", iface, hostLink),
+		firewall.ForwardReturnTrafficRule("FORWARD", "filter", iface, hostLink),
 	}
-
-	return rules, nil
+	if masquerade {
+		newRules = append(newRules, firewall.MasqueradeRule("POSTROUTING", "nat", iface))
+	}
+	return firewall.NewRules(newRules...)
 }
 
 type networkLinux struct {
@@ -61,8 +58,8 @@ func (n *networkLinux) Execute(fn func() error) error {
 	return fn()
 }
 
-func (n *networkLinux) Connect(hostIf string) error {
-	rules, rulesErr := getRulesForHostInterface(hostIf, hostName(n.config.Name))
+func (n *networkLinux) Connect(iface string, masquerade bool) error {
+	rules, rulesErr := getRulesForInterface(iface, hostName(n.config.Name), masquerade)
 	if rulesErr != nil {
 		return rulesErr
 	}
@@ -73,8 +70,8 @@ func (n *networkLinux) Connect(hostIf string) error {
 	return nil
 }
 
-func (n *networkLinux) Disconnect(hostIf string) error {
-	rules, rulesErr := getRulesForHostInterface(hostIf, hostName(n.config.Name))
+func (n *networkLinux) Disconnect(iface string, masquerade bool) error {
+	rules, rulesErr := getRulesForInterface(iface, hostName(n.config.Name), masquerade)
 	if rulesErr != nil {
 		return rulesErr
 	}
