@@ -54,7 +54,7 @@ func (d *dnsHandler) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 
 		lastResp = resp
 
-		if resp.Rcode == dns.RcodeSuccess && len(resp.Answer) > 0 {
+		if resp.Rcode == dns.RcodeSuccess {
 			slog.Debug("Received successful DNS response", "upstream", up, "answer", resp.Answer)
 			_ = w.WriteMsg(resp)
 			return
