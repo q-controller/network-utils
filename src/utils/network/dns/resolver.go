@@ -59,17 +59,22 @@ func NewDNSFailoverForwarder(ctx context.Context, options ...DNSForwarderOption)
 	tcp := &dns.Server{Net: "tcp", Addr: address, Handler: handler}
 	udp := &dns.Server{Net: "udp", Addr: address, Handler: handler}
 
-	upstreamsCh, upstreamsErr := GetUpstreamDNSFromFile(ctx, cfg.ResolvconfPath)
-	if upstreamsErr != nil {
-		return nil, upstreamsErr
-	}
-
-	go func() {
-		for upstreams := range upstreamsCh {
-			slog.Info("Updating DNS upstreams", "upstreams", upstreams.Endpoints, "error", upstreams.Error)
-			dnsHandler.Upstreams.Store(upstreams.Endpoints)
+	if len(cfg.Upstreams) > 0 {
+		slog.Info("Using static DNS upstreams", "upstreams", cfg.Upstreams)
+		dnsHandler.Upstreams.Store(cfg.Upstreams)
+	} else {
+		upstreamsCh, upstreamsErr := GetUpstreamDNSFromFile(ctx, cfg.ResolvconfPath)
+		if upstreamsErr != nil {
+			return nil, upstreamsErr
 		}
-	}()
+
+		go func() {
+			for upstreams := range upstreamsCh {
+				slog.Info("Updating DNS upstreams", "upstreams", upstreams.Endpoints, "error", upstreams.Error)
+				dnsHandler.Upstreams.Store(upstreams.Endpoints)
+			}
+		}()
+	}
 
 	go func() {
 		if err := udp.ListenAndServe(); err != nil {
