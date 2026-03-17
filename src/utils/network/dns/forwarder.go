@@ -13,6 +13,7 @@ type DNSForwarderConfig struct {
 	Timeout        time.Duration
 	ResolvconfPath string
 	Zone           string
+	Upstreams      []string
 }
 
 type DNSForwarderOption func(*DNSForwarderConfig)
@@ -38,5 +39,11 @@ func WithResolvconfPath(path string) DNSForwarderOption {
 func WithForwarderZone(zone string) DNSForwarderOption {
 	return func(cfg *DNSForwarderConfig) {
 		cfg.Zone = zone
+	}
+}
+
+func WithUpstreams(upstreams []string) DNSForwarderOption {
+	return func(cfg *DNSForwarderConfig) {
+		cfg.Upstreams = upstreams
 	}
 }
