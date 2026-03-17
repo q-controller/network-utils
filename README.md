@@ -23,6 +23,8 @@ This approach allows the software to provide robust and reliable bridge networki
 - Create and manage network bridges
 - Set up TAP interfaces
 - Configure bridge networking for device-to-device, host, and internet communication
+- DHCP server for automatic IP assignment to bridge-connected devices
+- DNS forwarding with failover support and optional CoreDNS backend
 
 ## Build
 
@@ -62,6 +64,53 @@ qemu-system-x86_64 -machine q35 -accel kvm -m 960 -nographic \
 ```
 
 After starting the VM, it will have internet access and be reachable from the host.
+
+## DHCP
+
+A tiny abstraction over [CoreDHCP](https://github.com/coredhcp/coredhcp) for running a DHCP server on the bridge interface. See [dhcp/README.md](src/utils/network/dhcp/README.md) for details.
+
+## DNS Forwarding
+
+The DNS package provides two forwarding implementations that listen on a bridge/gateway IP and forward queries to upstream resolvers:
+
+- **`DNSFailoverForwarder`** — a lightweight custom forwarder that tries upstream servers in order and returns the first successful response. Supports dynamic upstream discovery from `resolv.conf` (with file watching) or static upstreams.
+- **`CoreDNSServer`** — uses embedded [CoreDNS](https://coredns.io/) with the `forward` plugin, useful on systems without systemd-resolved where CoreDNS can handle `resolv.conf` reloading and plugin-based extensibility natively.
+
+### Static upstreams (proxy mode)
+
+On systems with systemd-resolved, the forwarder can be configured with a static upstream pointing to `127.0.0.53`. This delegates all resolution — including `/etc/hosts`, mDNS, split-DNS, and VPN configurations — to systemd-resolved:
+
+```go
+forwarder, err := dns.NewDNSFailoverForwarder(ctx,
+    dns.WithForwarderAddress(gatewayIP),
+    dns.WithForwarderTimeout(2*time.Second),
+    dns.WithUpstreams([]string{"127.0.0.53:53"}),
+)
+```
+
+### Dynamic upstreams (resolv.conf watching)
+
+When no static upstreams are provided, the forwarder watches a `resolv.conf` file for changes and updates its upstream list automatically. It prefers `/run/systemd/resolve/resolv.conf` when available, falling back to `/etc/resolv.conf`:
+
+```go
+forwarder, err := dns.NewDNSFailoverForwarder(ctx,
+    dns.WithForwarderAddress(gatewayIP),
+    dns.WithForwarderTimeout(2*time.Second),
+)
+```
+
+The path can be overridden with `dns.WithResolvconfPath(path)`.
+
+### CoreDNS backend
+
+For non-systemd systems or when CoreDNS plugins are needed:
+
+```go
+server, err := dns.NewCoreDNSServer(ctx,
+    dns.WithForwarderAddress(gatewayIP),
+    dns.WithResolvconfPath("/etc/resolv.conf"),
+)
+```
 
 ## Tests
 
