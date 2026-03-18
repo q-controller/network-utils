@@ -3,6 +3,7 @@ package dns
 import (
 	"context"
 	"log/slog"
+	"net"
 	"sync/atomic"
 	"time"
 
@@ -21,7 +22,98 @@ type dnsHandler struct {
 	ClientFactory ClientFactory
 }
 
+const systemResolverTTL = 60
+
+// resolveViaSystem attempts to resolve A/AAAA queries using the OS's native resolver
+// (getaddrinfo, /etc/hosts, mDNS, search domains, etc.).
+//
+// Returns a valid *dns.Msg on success (with answer records), or nil if:
+// - not an A/AAAA query
+// - lookup failed or returned no addresses
+// - any other case where we should fall back to upstream servers
+func resolveViaSystem(ctx context.Context, r *dns.Msg) *dns.Msg {
+	if len(r.Question) != 1 {
+		return nil // don't attempt multi-question
+	}
+
+	q := r.Question[0]
+	if q.Qtype != dns.TypeA && q.Qtype != dns.TypeAAAA {
+		return nil // let upstream handle MX, TXT, etc.
+	}
+
+	name := q.Name
+
+	addrs, err := net.DefaultResolver.LookupHost(ctx, name)
+	if err != nil {
+		slog.Debug("system resolver LookupHost failed", "name", name, "err", err)
+		return nil
+	}
+
+	if len(addrs) == 0 {
+		// Name resolved but no A/AAAA → NODATA, but upstream might have different view
+		return nil
+	}
+
+	resp := new(dns.Msg)
+	resp.SetReply(r)
+	resp.RecursionAvailable = true
+	resp.Compress = true
+	resp.Authoritative = false
+
+	for _, addrStr := range addrs {
+		ip := net.ParseIP(addrStr)
+		if ip == nil {
+			continue
+		}
+
+		if ip4 := ip.To4(); ip4 != nil && q.Qtype == dns.TypeA {
+			resp.Answer = append(resp.Answer, &dns.A{
+				Hdr: dns.RR_Header{
+					Name:   name,
+					Rrtype: dns.TypeA,
+					Class:  dns.ClassINET,
+					Ttl:    systemResolverTTL,
+				},
+				A: ip4,
+			})
+		} else if ip.To4() == nil && q.Qtype == dns.TypeAAAA { // IPv6 check
+			resp.Answer = append(resp.Answer, &dns.AAAA{
+				Hdr: dns.RR_Header{
+					Name:   name,
+					Rrtype: dns.TypeAAAA,
+					Class:  dns.ClassINET,
+					Ttl:    systemResolverTTL,
+				},
+				AAAA: ip,
+			})
+		}
+	}
+
+	if len(resp.Answer) == 0 {
+		// LookupHost returned addresses but none matched the query type
+		// (e.g. only IPv4 for an AAAA query). Return NODATA (NOERROR + empty answer)
+		// rather than falling through to upstreams which may SERVFAIL.
+		slog.Debug("Resolved via system, no matching records", "question", q)
+		return resp
+	}
+
+	slog.Debug("Resolved via system", "question", q, "answers", len(resp.Answer))
+	return resp
+}
+
 func (d *dnsHandler) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
+	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout)
+	defer cancel()
+
+	// Try system resolver first for A/AAAA queries.
+	// This uses getaddrinfo() which resolves /etc/hosts, mDNS, split-DNS, etc.
+	if resp := resolveViaSystem(ctx, r); resp != nil {
+		slog.Debug("Resolved via system resolver", "question", r.Question, "answer", resp.Answer)
+		_ = w.WriteMsg(resp)
+		return
+	}
+
+	// Fall back to upstream forwarding for other query types or if system resolver failed.
 	upstreams := []string{}
 	if val := d.Upstreams.Load(); val != nil {
 		upstreams = val.([]string)
@@ -41,7 +133,7 @@ func (d *dnsHandler) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 	for _, up := range upstreams {
 		slog.Debug("Forwarding DNS query", "upstream", up, "question", r.Question)
 
-		resp, _, respErr := client.ExchangeContext(context.Background(), r, up)
+		resp, _, respErr := client.ExchangeContext(ctx, r, up)
 
 		if respErr != nil {
 			slog.Error("DNS query failed", "upstream", up, "error", respErr)

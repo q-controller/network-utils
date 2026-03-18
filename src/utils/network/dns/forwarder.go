@@ -14,6 +14,7 @@ type DNSForwarderConfig struct {
 	ResolvconfPath string
 	Zone           string
 	Upstreams      []string
+	ReusePort      bool
 }
 
 type DNSForwarderOption func(*DNSForwarderConfig)
@@ -45,5 +46,11 @@ func WithForwarderZone(zone string) DNSForwarderOption {
 func WithUpstreams(upstreams []string) DNSForwarderOption {
 	return func(cfg *DNSForwarderConfig) {
 		cfg.Upstreams = upstreams
+	}
+}
+
+func WithReusePort() DNSForwarderOption {
+	return func(cfg *DNSForwarderConfig) {
+		cfg.ReusePort = true
 	}
 }
