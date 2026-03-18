@@ -37,7 +37,7 @@ func TestDNSForwarder_StaticUpstreams(t *testing.T) {
 
 	c := new(dns.Client)
 	m := new(dns.Msg)
-	m.SetQuestion("test.local.", dns.TypeA)
+	m.SetQuestion("test.invalid.", dns.TypeA)
 	resp, _, err := c.Exchange(m, forwarderAddr)
 	require.NoError(t, err)
 	require.NotNil(t, resp)
@@ -52,12 +52,9 @@ func startFakeUpstream(t *testing.T) string {
 	t.Helper()
 	ln, err := net.ListenPacket("udp", "127.0.0.1:0")
 	require.NoError(t, err)
-	addr := ln.LocalAddr().String()
-	_ = ln.Close()
 
 	srv := &dns.Server{
-		Addr: addr,
-		Net:  "udp",
+		PacketConn: ln,
 		Handler: dns.HandlerFunc(func(w dns.ResponseWriter, r *dns.Msg) {
 			resp := new(dns.Msg)
 			resp.SetReply(r)
@@ -75,10 +72,10 @@ func startFakeUpstream(t *testing.T) string {
 			_ = w.WriteMsg(resp)
 		}),
 	}
-	go func() { _ = srv.ListenAndServe() }()
+	go func() { _ = srv.ActivateAndServe() }()
 	t.Cleanup(func() { _ = srv.Shutdown() })
 	time.Sleep(100 * time.Millisecond)
-	return addr
+	return ln.LocalAddr().String()
 }
 
 func TestDNSForwarder_Integration(t *testing.T) {
