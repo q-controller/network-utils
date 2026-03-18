@@ -56,8 +56,8 @@ func NewDNSFailoverForwarder(ctx context.Context, options ...DNSForwarderOption)
 
 	handler := dns.NewServeMux()
 	handler.Handle(".", dnsHandler)
-	tcp := &dns.Server{Net: "tcp", Addr: address, Handler: handler}
-	udp := &dns.Server{Net: "udp", Addr: address, Handler: handler}
+	tcp := &dns.Server{Net: "tcp", Addr: address, Handler: handler, ReusePort: cfg.ReusePort}
+	udp := &dns.Server{Net: "udp", Addr: address, Handler: handler, ReusePort: cfg.ReusePort}
 
 	if len(cfg.Upstreams) > 0 {
 		slog.Info("Using static DNS upstreams", "upstreams", cfg.Upstreams)

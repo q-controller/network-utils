@@ -9,6 +9,7 @@ import (
 
 	"github.com/miekg/dns"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type testResponseWriter struct {
@@ -38,7 +39,7 @@ func TestDnsHandler_EmptyUpstreams(t *testing.T) {
 	)
 	w := &testResponseWriter{}
 	r := new(dns.Msg)
-	r.SetQuestion("example.com.", dns.TypeA)
+	r.SetQuestion("nonexistent.invalid.", dns.TypeA)
 	h.ServeDNS(w, r)
 	assert.NotNil(t, w.msg, "expected a response message")
 	if w.msg != nil {
@@ -53,7 +54,7 @@ func TestDnsHandler_NonEmptyFailingUpstreams(t *testing.T) {
 	h.Upstreams.Store([]string{"127.0.0.1:53"})
 	w := &testResponseWriter{}
 	r := new(dns.Msg)
-	r.SetQuestion("example.com.", dns.TypeA)
+	r.SetQuestion("nonexistent.invalid.", dns.TypeA)
 	h.ServeDNS(w, r)
 	assert.NotNil(t, w.msg, "expected a response message")
 	if w.msg != nil {
@@ -111,7 +112,7 @@ func TestDnsHandler_Responses(t *testing.T) {
 			}
 			w := &testResponseWriter{}
 			r := new(dns.Msg)
-			r.SetQuestion("example.com.", dns.TypeA)
+			r.SetQuestion("nonexistent.invalid.", dns.TypeA)
 			h.ServeDNS(w, r)
 			assert.NotNil(t, w.msg, "expected a response message")
 			if w.msg != nil {
@@ -119,4 +120,63 @@ func TestDnsHandler_Responses(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestResolveViaSystem_Localhost(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	r := new(dns.Msg)
+	r.SetQuestion("localhost.", dns.TypeA)
+	resp := resolveViaSystem(ctx, r)
+	require.NotNil(t, resp, "expected system resolver to resolve localhost")
+	assert.Equal(t, dns.RcodeSuccess, resp.Rcode)
+	require.NotEmpty(t, resp.Answer)
+	a, ok := resp.Answer[0].(*dns.A)
+	require.True(t, ok)
+	assert.Equal(t, net.ParseIP("127.0.0.1").To4(), a.A.To4())
+}
+
+func TestResolveViaSystem_NonExistent(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	r := new(dns.Msg)
+	r.SetQuestion("nonexistent.invalid.", dns.TypeA)
+	resp := resolveViaSystem(ctx, r)
+	assert.Nil(t, resp, "expected nil for non-existent host")
+}
+
+func TestResolveViaSystem_SkipsNonAddressTypes(t *testing.T) {
+	ctx := context.Background()
+	for _, qtype := range []uint16{dns.TypeTXT, dns.TypeMX, dns.TypeNS, dns.TypeSRV} {
+		r := new(dns.Msg)
+		r.SetQuestion("localhost.", qtype)
+		resp := resolveViaSystem(ctx, r)
+		assert.Nil(t, resp, "expected nil for query type %d", qtype)
+	}
+}
+
+func TestResolveViaSystem_CancelledContext(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	r := new(dns.Msg)
+	r.SetQuestion("localhost.", dns.TypeA)
+	resp := resolveViaSystem(ctx, r)
+	assert.Nil(t, resp, "expected nil when context is cancelled")
+}
+
+func TestDnsHandler_SystemResolverForLocalhost(t *testing.T) {
+	h := NewDnsHandler(WithTimeout(5 * time.Second))
+	w := &testResponseWriter{}
+	r := new(dns.Msg)
+	r.SetQuestion("localhost.", dns.TypeA)
+	h.ServeDNS(w, r)
+	require.NotNil(t, w.msg)
+	assert.Equal(t, dns.RcodeSuccess, w.msg.Rcode)
+	require.NotEmpty(t, w.msg.Answer)
+	a, ok := w.msg.Answer[0].(*dns.A)
+	require.True(t, ok)
+	assert.Equal(t, net.ParseIP("127.0.0.1").To4(), a.A.To4())
 }
