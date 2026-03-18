@@ -161,8 +161,11 @@ func TestResolveViaSystem_CancelledContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
+	// Use a hostname that requires network I/O (not in /etc/hosts).
+	// On Linux, glibc's getaddrinfo resolves /etc/hosts entries instantly
+	// before checking context cancellation, so "localhost" would succeed.
 	r := new(dns.Msg)
-	r.SetQuestion("localhost.", dns.TypeA)
+	r.SetQuestion("cancel-test.example.com.", dns.TypeA)
 	resp := resolveViaSystem(ctx, r)
 	assert.Nil(t, resp, "expected nil when context is cancelled")
 }
