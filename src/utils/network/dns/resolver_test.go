@@ -31,7 +31,9 @@ func TestDNSForwarder_StaticUpstreams(t *testing.T) {
 		WithUpstreams([]string{upstreamAddr}),
 	)
 	require.NoError(t, err)
-	defer forwarder.Stop()
+	stop, serveErr := forwarder.Serve()
+	require.NoError(t, serveErr)
+	defer stop()
 
 	time.Sleep(200 * time.Millisecond)
 
@@ -94,7 +96,9 @@ func TestDNSForwarder_Integration(t *testing.T) {
 		WithResolvconfPath("/etc/resolv.conf"),
 	)
 	require.NoError(t, err)
-	defer forwarder.Stop()
+	stop, serveErr := forwarder.Serve()
+	require.NoError(t, serveErr)
+	defer stop()
 
 	// Wait a moment for the server to start
 	time.Sleep(200 * time.Millisecond)

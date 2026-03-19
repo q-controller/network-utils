@@ -5,7 +5,7 @@ import (
 )
 
 type DNSForwarder interface {
-	Stop()
+	Serve() (stop func(), err error)
 }
 
 type DNSForwarderConfig struct {

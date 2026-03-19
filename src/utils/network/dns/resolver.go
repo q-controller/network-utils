@@ -13,20 +13,46 @@ import (
 )
 
 type DNSFailoverForwarder struct {
-	once sync.Once
-	udp  *dns.Server
-	tcp  *dns.Server
+	once        sync.Once
+	udp         *dns.Server
+	tcp         *dns.Server
+	dnsHandler  *dnsHandler
+	upstreamsCh <-chan UpstreamDNS
 }
 
-func (d *DNSFailoverForwarder) Stop() {
-	d.once.Do(func() {
-		if err := d.udp.Shutdown(); err != nil {
-			slog.Error("Failed to shutdown UDP DNS server", "error", err)
+func (d *DNSFailoverForwarder) Serve() (func(), error) {
+	if d.upstreamsCh != nil {
+		go func() {
+			for upstreams := range d.upstreamsCh {
+				slog.Info("Updating DNS upstreams", "upstreams", upstreams.Endpoints, "error", upstreams.Error)
+				d.dnsHandler.Upstreams.Store(upstreams.Endpoints)
+			}
+		}()
+	}
+
+	go func() {
+		if err := d.udp.ListenAndServe(); err != nil {
+			slog.Error("UDP DNS server failed", "error", err)
 		}
-		if err := d.tcp.Shutdown(); err != nil {
-			slog.Error("Failed to shutdown TCP DNS server", "error", err)
+	}()
+
+	go func() {
+		if err := d.tcp.ListenAndServe(); err != nil {
+			slog.Error("TCP DNS server failed", "error", err)
 		}
-	})
+	}()
+
+	stop := func() {
+		d.once.Do(func() {
+			if err := d.udp.Shutdown(); err != nil {
+				slog.Error("Failed to shutdown UDP DNS server", "error", err)
+			}
+			if err := d.tcp.Shutdown(); err != nil {
+				slog.Error("Failed to shutdown TCP DNS server", "error", err)
+			}
+		})
+	}
+	return stop, nil
 }
 
 func NewDNSFailoverForwarder(ctx context.Context, options ...DNSForwarderOption) (DNSForwarder, error) {
@@ -59,37 +85,22 @@ func NewDNSFailoverForwarder(ctx context.Context, options ...DNSForwarderOption)
 	tcp := &dns.Server{Net: "tcp", Addr: address, Handler: handler, ReusePort: cfg.ReusePort}
 	udp := &dns.Server{Net: "udp", Addr: address, Handler: handler, ReusePort: cfg.ReusePort}
 
+	var upstreamsCh <-chan UpstreamDNS
 	if len(cfg.Upstreams) > 0 {
 		slog.Info("Using static DNS upstreams", "upstreams", cfg.Upstreams)
 		dnsHandler.Upstreams.Store(cfg.Upstreams)
 	} else {
-		upstreamsCh, upstreamsErr := GetUpstreamDNSFromFile(ctx, cfg.ResolvconfPath)
+		ch, upstreamsErr := GetUpstreamDNSFromFile(ctx, cfg.ResolvconfPath)
 		if upstreamsErr != nil {
 			return nil, upstreamsErr
 		}
-
-		go func() {
-			for upstreams := range upstreamsCh {
-				slog.Info("Updating DNS upstreams", "upstreams", upstreams.Endpoints, "error", upstreams.Error)
-				dnsHandler.Upstreams.Store(upstreams.Endpoints)
-			}
-		}()
+		upstreamsCh = ch
 	}
 
-	go func() {
-		if err := udp.ListenAndServe(); err != nil {
-			slog.Error("UDP DNS server failed", "error", err)
-		}
-	}()
-
-	go func() {
-		if err := tcp.ListenAndServe(); err != nil {
-			slog.Error("TCP DNS server failed", "error", err)
-		}
-	}()
-
 	return &DNSFailoverForwarder{
-		udp: udp,
-		tcp: tcp,
+		udp:         udp,
+		tcp:         tcp,
+		dnsHandler:  dnsHandler,
+		upstreamsCh: upstreamsCh,
 	}, nil
 }
