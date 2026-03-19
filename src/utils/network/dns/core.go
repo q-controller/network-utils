@@ -95,11 +95,14 @@ func buildCorefile(cfg *DNSForwarderConfig) string {
 `, zone, port, ip, cfg.ResolvconfPath)
 }
 
-func (s *CoreDNSServer) Stop() {
-	s.once.Do(func() {
-		if s.instance != nil {
-			s.instance.Stop()
-			s.instance.Wait()
-		}
-	})
+func (s *CoreDNSServer) Serve() (func(), error) {
+	stop := func() {
+		s.once.Do(func() {
+			if s.instance != nil {
+				s.instance.Stop()
+				s.instance.Wait()
+			}
+		})
+	}
+	return stop, nil // CoreDNS starts serving in caddy.Start() during construction
 }
