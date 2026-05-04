@@ -1,17 +1,17 @@
 module github.com/q-controller/network-utils
 
-go 1.25.5
+go 1.25.9
 
 require (
 	github.com/coredhcp/coredhcp v0.0.0-20260110195901-da62c7b1bd56
 	github.com/coredns/caddy v1.1.4
-	github.com/coredns/coredns v1.14.1
+	github.com/coredns/coredns v1.14.2
 	github.com/google/nftables v0.3.0
 	github.com/spf13/cobra v1.10.2
 	github.com/stretchr/testify v1.11.1
 	github.com/vishvananda/netlink v1.3.1
 	github.com/vishvananda/netns v0.0.5
-	golang.org/x/sys v0.40.0
+	golang.org/x/sys v0.41.0
 )
 
 require (
@@ -25,7 +25,9 @@ require (
 	github.com/grpc-ecosystem/grpc-opentracing v0.0.0-20180507213350-8e809c8a8645 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
+	github.com/onsi/gomega v1.38.2 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
+	github.com/pires/go-proxyproto v0.11.0 // indirect
 	github.com/prometheus/client_golang v1.23.0 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.67.5 // indirect
@@ -33,12 +35,13 @@ require (
 	github.com/quic-go/qpack v0.6.0 // indirect
 	github.com/quic-go/quic-go v0.59.0 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
+	go.opentelemetry.io/otel/sdk/metric v1.40.0 // indirect
 	go.uber.org/mock v0.6.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
-	golang.org/x/mod v0.31.0 // indirect
-	golang.org/x/tools v0.40.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20251222181119-0a764e51fe1b // indirect
-	google.golang.org/grpc v1.78.0 // indirect
+	golang.org/x/mod v0.32.0 // indirect
+	golang.org/x/tools v0.41.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260217215200-42d3e9bedb6d // indirect
+	google.golang.org/grpc v1.79.3 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
 
@@ -47,7 +50,7 @@ require (
 	github.com/chappjc/logrus-prefix v0.0.0-20180227015900-3a1d64819adb // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/fsnotify/fsnotify v1.9.0
-	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
+	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/gopacket v1.1.19 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
@@ -75,10 +78,10 @@ require (
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/u-root/uio v0.0.0-20240224005618-d2acac8f3701 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/crypto v0.47.0 // indirect
-	golang.org/x/net v0.49.0 // indirect
+	golang.org/x/crypto v0.48.0 // indirect
+	golang.org/x/net v0.51.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
-	golang.org/x/term v0.39.0 // indirect
-	golang.org/x/text v0.33.0 // indirect
+	golang.org/x/term v0.40.0 // indirect
+	golang.org/x/text v0.34.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
