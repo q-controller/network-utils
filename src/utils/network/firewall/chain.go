@@ -4,6 +4,7 @@
 package firewall
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/google/nftables"
@@ -31,7 +32,7 @@ func NewChain(opts ...Option) (*nftables.Chain, *nftables.Table, error) {
 	}
 
 	if config.Name == "" || config.Table == "" {
-		return nil, nil, fmt.Errorf("chain name and table must be specified")
+		return nil, nil, errors.New("chain name and table must be specified")
 	}
 
 	tables, tablesErr := conn.ListTables()

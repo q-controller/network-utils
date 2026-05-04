@@ -2,6 +2,7 @@ package dns
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -48,7 +49,7 @@ func NewCoreDNSServer(ctx context.Context, options ...DNSForwarderOption) (DNSFo
 		opt(cfg)
 	}
 	if cfg.Address == "" {
-		return nil, fmt.Errorf("DNS forwarder address not specified")
+		return nil, errors.New("DNS forwarder address not specified")
 	}
 
 	// Build Corefile content
@@ -99,7 +100,9 @@ func (s *CoreDNSServer) Serve() (func(), error) {
 	stop := func() {
 		s.once.Do(func() {
 			if s.instance != nil {
-				s.instance.Stop()
+				if err := s.instance.Stop(); err != nil {
+					slog.Warn("coredns instance stop failed", "error", err)
+				}
 				s.instance.Wait()
 			}
 		})

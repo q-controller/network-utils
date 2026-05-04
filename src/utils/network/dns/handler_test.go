@@ -2,7 +2,7 @@ package dns
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"net"
 	"testing"
 	"time"
@@ -34,7 +34,7 @@ func (w *testResponseWriter) TsigTimersOnly(bool) {}
 func (w *testResponseWriter) Hijack()             {}
 
 func TestDnsHandler_EmptyUpstreams(t *testing.T) {
-	h := NewDnsHandler(
+	h := NewDNSHandler(
 		WithTimeout(time.Second),
 	)
 	w := &testResponseWriter{}
@@ -48,7 +48,7 @@ func TestDnsHandler_EmptyUpstreams(t *testing.T) {
 }
 
 func TestDnsHandler_NonEmptyFailingUpstreams(t *testing.T) {
-	h := NewDnsHandler(
+	h := NewDNSHandler(
 		WithTimeout(time.Second),
 	)
 	h.Upstreams.Store([]string{"127.0.0.1:53"})
@@ -81,7 +81,7 @@ func (c *testDnsClient) ExchangeContext(ctx context.Context, m *dns.Msg, a strin
 		}
 		return resp, 0, nil
 	}
-	return nil, 0, fmt.Errorf("test client failed")
+	return nil, 0, errors.New("test client failed")
 }
 
 func TestDnsHandler_Responses(t *testing.T) {
@@ -102,11 +102,11 @@ func TestDnsHandler_Responses(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			opts := []DnsOption{WithTimeout(time.Second)}
+			opts := []DNSOption{WithTimeout(time.Second)}
 			if tc.factory != nil {
 				opts = append(opts, WithClientFactory(tc.factory))
 			}
-			h := NewDnsHandler(opts...)
+			h := NewDNSHandler(opts...)
 			if tc.upstreams != nil {
 				h.Upstreams.Store(tc.upstreams)
 			}
@@ -171,7 +171,7 @@ func TestResolveViaSystem_CancelledContext(t *testing.T) {
 }
 
 func TestDnsHandler_SystemResolverForLocalhost(t *testing.T) {
-	h := NewDnsHandler(WithTimeout(5 * time.Second))
+	h := NewDNSHandler(WithTimeout(5 * time.Second))
 	w := &testResponseWriter{}
 	r := new(dns.Msg)
 	r.SetQuestion("localhost.", dns.TypeA)

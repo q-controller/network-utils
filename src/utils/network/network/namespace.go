@@ -23,23 +23,23 @@ func switchToNamespace(nsName string) (func(), error) {
 
 	targetNS, targetNsErr := netns.GetFromName(nsName)
 	if targetNsErr != nil {
-		origNS.Close()
+		_ = origNS.Close()
 		runtime.UnlockOSThread()
 		return nil, targetNsErr
 	}
 
 	if setNsErr := netns.Set(targetNS); setNsErr != nil {
-		origNS.Close()
-		targetNS.Close()
+		_ = origNS.Close()
+		_ = targetNS.Close()
 		runtime.UnlockOSThread()
 		return nil, setNsErr
 	}
 
-	targetNS.Close()
+	_ = targetNS.Close()
 
 	return func() {
 		defer runtime.UnlockOSThread()
-		defer origNS.Close()
+		defer func() { _ = origNS.Close() }()
 		// Best effort to restore namespace - log errors but don't panic
 		if err := netns.Set(origNS); err != nil {
 			_ = err // Ignore restoration errors - thread will be unlocked anyway
@@ -66,7 +66,7 @@ func createNamespace(nsName string) (int, error) {
 	if origNsErr != nil {
 		return int(netns.None()), origNsErr
 	}
-	defer origNS.Close()
+	defer func() { _ = origNS.Close() }()
 
 	// Create new namespace (this switches to it)
 	nsHandle, newErr := netns.NewNamed(nsName)
@@ -76,7 +76,7 @@ func createNamespace(nsName string) (int, error) {
 
 	// Switch back to original namespace
 	if setErr := netns.Set(origNS); setErr != nil {
-		nsHandle.Close()
+		_ = nsHandle.Close()
 		return int(netns.None()), setErr
 	}
 

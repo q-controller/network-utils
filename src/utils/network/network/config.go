@@ -3,6 +3,7 @@
 package network
 
 import (
+	"errors"
 	"fmt"
 	"net"
 
@@ -12,8 +13,8 @@ import (
 type NetworkConfig struct {
 	Name        string
 	Subnet      *net.IPNet
-	GatewayIp   net.IP
-	BridgeIp    net.IP
+	GatewayIP   net.IP
+	BridgeIP    net.IP
 	LinkManager ifc.LinkManager
 }
 
@@ -35,14 +36,14 @@ func WithSubnet(ipNet *net.IPNet) NetworkOption {
 
 func WithGateway(ip net.IP) NetworkOption {
 	return func(n *NetworkConfig) error {
-		n.GatewayIp = ip
+		n.GatewayIP = ip
 		return nil
 	}
 }
 
 func WithBridge(ip net.IP) NetworkOption {
 	return func(n *NetworkConfig) error {
-		n.BridgeIp = ip
+		n.BridgeIP = ip
 		return nil
 	}
 }
@@ -56,31 +57,31 @@ func WithLinkManager(manager ifc.LinkManager) NetworkOption {
 
 func (n *NetworkConfig) validate() error {
 	if len(n.Name) == 0 {
-		return fmt.Errorf("network name is required")
+		return errors.New("network name is required")
 	}
 
 	if n.Subnet == nil {
-		return fmt.Errorf("network Subnet is required")
+		return errors.New("network Subnet is required")
 	}
 
-	if n.GatewayIp == nil {
-		return fmt.Errorf("gateway IP is required")
+	if n.GatewayIP == nil {
+		return errors.New("gateway IP is required")
 	}
 
-	if n.BridgeIp == nil {
-		return fmt.Errorf("bridge IP is required")
+	if n.BridgeIP == nil {
+		return errors.New("bridge IP is required")
 	}
 
-	if !n.Subnet.Contains(n.GatewayIp) {
-		return fmt.Errorf("gateway IP %s is not in network %s", n.GatewayIp.String(), n.Subnet.String())
+	if !n.Subnet.Contains(n.GatewayIP) {
+		return fmt.Errorf("gateway IP %s is not in network %s", n.GatewayIP.String(), n.Subnet.String())
 	}
 
-	if !n.Subnet.Contains(n.BridgeIp) {
-		return fmt.Errorf("bridge IP %s is not in network %s", n.BridgeIp.String(), n.Subnet.String())
+	if !n.Subnet.Contains(n.BridgeIP) {
+		return fmt.Errorf("bridge IP %s is not in network %s", n.BridgeIP.String(), n.Subnet.String())
 	}
 
 	if n.LinkManager == nil {
-		return fmt.Errorf("link manager is required")
+		return errors.New("link manager is required")
 	}
 
 	return nil

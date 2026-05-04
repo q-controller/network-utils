@@ -3,6 +3,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/q-controller/network-utils/src/utils/network/ifc"
 	"github.com/spf13/cobra"
 )
@@ -32,8 +34,12 @@ func init() {
 	rootCmd.AddCommand(createBridgeCmd)
 
 	createBridgeCmd.Flags().StringP("name", "n", "", "Name of the bridge to create")
-	createBridgeCmd.MarkFlagRequired("name")
+	if err := createBridgeCmd.MarkFlagRequired("name"); err != nil {
+		panic(fmt.Errorf("failed to mark flag `name` as required: %w", err))
+	}
 	createBridgeCmd.Flags().String("cidr", "", "CIDR for the bridge network")
-	createBridgeCmd.MarkFlagRequired("cidr")
+	if err := createBridgeCmd.MarkFlagRequired("cidr"); err != nil {
+		panic(fmt.Errorf("failed to mark flag `cidr` as required: %w", err))
+	}
 	createBridgeCmd.Flags().Bool("disable-tx-offload", false, "Disable TX offload for the bridge interface")
 }

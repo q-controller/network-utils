@@ -3,6 +3,7 @@
 package ifc
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"os/exec"
@@ -46,10 +47,11 @@ func (NetlinkBridgeManager) SetIP(name string, ip net.IP, mask net.IPMask) error
 
 func (NetlinkBridgeManager) Exists(name string) (bool, error) {
 	if _, linkErr := netlink.LinkByName(name); linkErr != nil {
-		if _, ok := linkErr.(netlink.LinkNotFoundError); ok {
+		var linkNotFoundError netlink.LinkNotFoundError
+		if errors.As(linkErr, &linkNotFoundError) {
 			return false, nil
 		}
-		return false, fmt.Errorf("error checking if link exists: %v", linkErr)
+		return false, fmt.Errorf("error checking if link exists: %w", linkErr)
 	}
 
 	return true, nil
@@ -95,7 +97,8 @@ func (NetlinkBridgeManager) HasIP(name string, ip net.IP, mask net.IPMask) (bool
 func (NetlinkBridgeManager) DeleteLink(name string) error {
 	link, linkErr := netlink.LinkByName(name)
 	if linkErr != nil {
-		if _, ok := linkErr.(netlink.LinkNotFoundError); ok {
+		var linkNotFoundError netlink.LinkNotFoundError
+		if errors.As(linkErr, &linkNotFoundError) {
 			return nil // Link does not exist, nothing to delete
 		}
 		return linkErr

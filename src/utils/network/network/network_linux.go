@@ -103,7 +103,7 @@ func NewNetwork(opts ...NetworkOption) (Network, error) {
 	if nsErr != nil {
 		return nil, nsErr
 	}
-	defer unix.Close(nsFd)
+	defer func() { _ = unix.Close(nsFd) }()
 
 	// Create veth pair
 	vethAttrs := netlink.NewLinkAttrs()
@@ -117,26 +117,26 @@ func NewNetwork(opts ...NetworkOption) (Network, error) {
 	if addErr := netlink.LinkAdd(link); addErr != nil {
 		if !errors.Is(addErr, unix.EEXIST) {
 			// Clean up namespace on veth creation failure
-			deleteNamespace(config.Name)
+			_ = deleteNamespace(config.Name)
 			return nil, addErr
 		}
 	}
 
 	// Configure host side of veth pair
-	if err := config.LinkManager.SetIP(hostName(config.Name), config.GatewayIp, config.Subnet.Mask); err != nil {
-		network.Destroy()
+	if err := config.LinkManager.SetIP(hostName(config.Name), config.GatewayIP, config.Subnet.Mask); err != nil {
+		_ = network.Destroy()
 		return nil, err
 	}
 
 	if err := config.LinkManager.BringUp(hostName(config.Name)); err != nil {
-		network.Destroy()
+		_ = network.Destroy()
 		return nil, err
 	}
 
 	// Configure namespace side of veth pair
 	if err := network.Execute(func() error {
 		cidr := &net.IPNet{
-			IP:   config.BridgeIp,
+			IP:   config.BridgeIP,
 			Mask: config.Subnet.Mask,
 		}
 		if err := ifc.CreateBridgeWithManager(config.LinkManager, config.Name, cidr.String(), true); err != nil {
@@ -151,13 +151,13 @@ func NewNetwork(opts ...NetworkOption) (Network, error) {
 			return fmt.Errorf("failed to set bridge master: %w", err)
 		}
 
-		if err := SetDefaultRoute(config.Name, config.GatewayIp); err != nil {
+		if err := SetDefaultRoute(config.Name, config.GatewayIP); err != nil {
 			return fmt.Errorf("failed to set default route: %w", err)
 		}
 
 		return nil
 	}); err != nil {
-		network.Destroy()
+		_ = network.Destroy()
 		return nil, err
 	}
 
