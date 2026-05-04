@@ -26,24 +26,24 @@ var configureBridgeCmd = &cobra.Command{
 			return nftPrefixErr
 		}
 
-		if jumpErr := firewall.AddJumpRule("FORWARD", fmt.Sprintf("%sFORWARD", nftPrefix), "filter"); jumpErr != nil {
+		if jumpErr := firewall.AddJumpRule("FORWARD", nftPrefix+"FORWARD", "filter"); jumpErr != nil {
 			return jumpErr
 		}
 
-		if jumpErr := firewall.AddJumpRule("INPUT", fmt.Sprintf("%sINPUT", nftPrefix), "filter"); jumpErr != nil {
+		if jumpErr := firewall.AddJumpRule("INPUT", nftPrefix+"INPUT", "filter"); jumpErr != nil {
 			return jumpErr
 		}
 
 		rules, rulesErr := firewall.NewRules(
-			firewall.ForwardOutboundRule(fmt.Sprintf("%sFORWARD", nftPrefix), "filter", hostIf, name),
-			firewall.ForwardReturnTrafficRule(fmt.Sprintf("%sFORWARD", nftPrefix), "filter", hostIf, name),
+			firewall.ForwardOutboundRule(nftPrefix+"FORWARD", "filter", hostIf, name),
+			firewall.ForwardReturnTrafficRule(nftPrefix+"FORWARD", "filter", hostIf, name),
 			firewall.MasqueradeRule("POSTROUTING", "nat", hostIf),
-			firewall.PortRule(53, "udp", fmt.Sprintf("%sINPUT", nftPrefix), "filter"),
-			firewall.PortRule(67, "udp", fmt.Sprintf("%sINPUT", nftPrefix), "filter"),
-			firewall.PortRule(68, "udp", fmt.Sprintf("%sINPUT", nftPrefix), "filter"),
-			firewall.PortRule(53, "tcp", fmt.Sprintf("%sINPUT", nftPrefix), "filter"),
-			firewall.PortRule(67, "tcp", fmt.Sprintf("%sINPUT", nftPrefix), "filter"),
-			firewall.PortRule(68, "tcp", fmt.Sprintf("%sINPUT", nftPrefix), "filter"),
+			firewall.PortRule(53, "udp", nftPrefix+"INPUT", "filter"),
+			firewall.PortRule(67, "udp", nftPrefix+"INPUT", "filter"),
+			firewall.PortRule(68, "udp", nftPrefix+"INPUT", "filter"),
+			firewall.PortRule(53, "tcp", nftPrefix+"INPUT", "filter"),
+			firewall.PortRule(67, "tcp", nftPrefix+"INPUT", "filter"),
+			firewall.PortRule(68, "tcp", nftPrefix+"INPUT", "filter"),
 		)
 
 		if rulesErr != nil {
@@ -58,8 +58,12 @@ func init() {
 	rootCmd.AddCommand(configureBridgeCmd)
 
 	configureBridgeCmd.Flags().StringP("name", "n", "", "Name of the bridge to configure")
-	configureBridgeCmd.MarkFlagRequired("name")
+	if err := configureBridgeCmd.MarkFlagRequired("name"); err != nil {
+		panic(fmt.Errorf("failed to mark flag `name` as required: %w", err))
+	}
 	configureBridgeCmd.Flags().String("hostIf", "", "Host interface that the bridge will use")
-	configureBridgeCmd.MarkFlagRequired("hostIf")
+	if err := configureBridgeCmd.MarkFlagRequired("hostIf"); err != nil {
+		panic(fmt.Errorf("failed to mark flag `hostIf` as required: %w", err))
+	}
 	configureBridgeCmd.Flags().String("nftPrefix", "QEMU-", "Prefix for nftables rules")
 }

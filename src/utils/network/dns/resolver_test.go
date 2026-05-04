@@ -85,7 +85,7 @@ func TestDNSForwarder_Integration(t *testing.T) {
 	defer cancel()
 
 	// Pick a random free port
-	ln, listErr := net.Listen("tcp", fmt.Sprintf("%s:0", "127.0.0.1"))
+	ln, listErr := net.Listen("tcp", "127.0.0.1"+":0")
 	assert.NoError(t, listErr)
 	addr := ln.Addr().(*net.TCPAddr)
 	_ = ln.Close()

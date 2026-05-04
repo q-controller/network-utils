@@ -3,6 +3,7 @@
 package dhcp
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"time"
@@ -26,12 +27,12 @@ func WithInterface(ifaceName string, routerIP net.IP) DHCPOption {
 	return func(cfg *DHCPConfig) error {
 		iface, ifaceErr := net.InterfaceByName(ifaceName)
 		if ifaceErr != nil {
-			return fmt.Errorf("failed to get interface %s: %v", ifaceName, ifaceErr)
+			return fmt.Errorf("failed to get interface %s: %w", ifaceName, ifaceErr)
 		}
 
 		addrs, addrsErr := iface.Addrs()
 		if addrsErr != nil {
-			return fmt.Errorf("failed to get addresses for interface %s: %v", ifaceName, addrsErr)
+			return fmt.Errorf("failed to get addresses for interface %s: %w", ifaceName, addrsErr)
 		}
 
 		var foundSubnet *net.IPNet
@@ -57,7 +58,7 @@ func WithInterface(ifaceName string, routerIP net.IP) DHCPOption {
 func WithRange(start, end net.IP) DHCPOption {
 	return func(cfg *DHCPConfig) error {
 		if start == nil || end == nil {
-			return fmt.Errorf("start and end IPs must not be nil")
+			return errors.New("start and end IPs must not be nil")
 		}
 
 		cfg.RangeStart = start
@@ -89,11 +90,11 @@ func WithLeaseFile(filePath string) DHCPOption {
 
 func (c *DHCPConfig) validate() error {
 	if c.RangeStart == nil || c.RangeEnd == nil {
-		return fmt.Errorf("IP range must be specified")
+		return errors.New("IP range must be specified")
 	}
 
 	if c.Router == nil {
-		return fmt.Errorf("router IP must be specified")
+		return errors.New("router IP must be specified")
 	}
 
 	if !address.IsValidRange(c.RangeStart, c.RangeEnd, c.Subnet) {

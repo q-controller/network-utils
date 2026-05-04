@@ -165,27 +165,27 @@ func (d *dnsHandler) ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 	_ = w.WriteMsg(m)
 }
 
-type DnsConfig struct {
+type DNSConfig struct {
 	Timeout       time.Duration
 	ClientFactory ClientFactory
 }
 
-type DnsOption func(*DnsConfig)
+type DNSOption func(*DNSConfig)
 
-func WithTimeout(timeout time.Duration) DnsOption {
-	return func(c *DnsConfig) {
+func WithTimeout(timeout time.Duration) DNSOption {
+	return func(c *DNSConfig) {
 		c.Timeout = timeout
 	}
 }
 
-func WithClientFactory(factory ClientFactory) DnsOption {
-	return func(c *DnsConfig) {
+func WithClientFactory(factory ClientFactory) DNSOption {
+	return func(c *DNSConfig) {
 		c.ClientFactory = factory
 	}
 }
 
-func NewDnsHandler(options ...DnsOption) *dnsHandler {
-	cfg := &DnsConfig{}
+func NewDNSHandler(options ...DNSOption) *dnsHandler {
+	cfg := &DNSConfig{}
 	for _, opt := range options {
 		opt(cfg)
 	}

@@ -14,7 +14,7 @@ import (
 func CreateBridgeWithManager(mgr LinkManager, name string, gatewayCidr string, disableTxOffloading bool) error {
 	ip, ipnet, ipErr := net.ParseCIDR(gatewayCidr)
 	if ipErr != nil {
-		return fmt.Errorf("invalid CIDR format: %v", ipErr)
+		return fmt.Errorf("invalid CIDR format: %w", ipErr)
 	}
 
 	if ip == nil {
@@ -32,22 +32,22 @@ func CreateBridgeWithManager(mgr LinkManager, name string, gatewayCidr string, d
 				return nil
 			}
 		} else {
-			return fmt.Errorf("failed to add bridge %s: %v", name, addBridgeErr)
+			return fmt.Errorf("failed to add bridge %s: %w", name, addBridgeErr)
 		}
 	}
 
 	if addrErr := mgr.SetIP(name, ip, ipnet.Mask); addrErr != nil {
 		if delErr := mgr.DeleteLink(name); delErr != nil {
-			return fmt.Errorf("failed to set ip: %v, failed to delete link: %v", addrErr, delErr)
+			return fmt.Errorf("failed to set ip: %w, failed to delete link: %w", addrErr, delErr)
 		}
-		return fmt.Errorf("failed to set ip: %v", addrErr)
+		return fmt.Errorf("failed to set ip: %w", addrErr)
 	}
 
 	if upErr := mgr.BringUp(name); upErr != nil {
 		if delErr := mgr.DeleteLink(name); delErr != nil {
-			return fmt.Errorf("failed to bring bridge %s up: %v, failed to delete link: %v", name, upErr, delErr)
+			return fmt.Errorf("failed to bring bridge %s up: %w, failed to delete link: %w", name, upErr, delErr)
 		}
-		return fmt.Errorf("failed to bring bridge %s up: %v", name, upErr)
+		return fmt.Errorf("failed to bring bridge %s up: %w", name, upErr)
 	}
 
 	slog.Debug("successfully created bridge", "name", name)

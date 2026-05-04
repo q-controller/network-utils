@@ -26,12 +26,12 @@ func StartDHCPServer(options ...DHCPOption) (*DHCPServer, error) {
 
 	for _, opt := range options {
 		if err := opt(DHCPConfig); err != nil {
-			return nil, fmt.Errorf("failed to apply DHCP option: %v", err)
+			return nil, fmt.Errorf("failed to apply DHCP option: %w", err)
 		}
 	}
 
 	if err := DHCPConfig.validate(); err != nil {
-		return nil, fmt.Errorf("DHCP configuration validation failed: %v", err)
+		return nil, fmt.Errorf("DHCP configuration validation failed: %w", err)
 	}
 
 	start := DHCPConfig.RangeStart
@@ -75,7 +75,7 @@ func StartDHCPServer(options ...DHCPOption) (*DHCPServer, error) {
 
 	srv, err := server.Start(cfg)
 	if err != nil {
-		return nil, fmt.Errorf("failed to start DHCP server: %v", err)
+		return nil, fmt.Errorf("failed to start DHCP server: %w", err)
 	}
 
 	dhcpServer := &DHCPServer{

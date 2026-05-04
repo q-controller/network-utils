@@ -2,7 +2,7 @@ package dns
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"log/slog"
 	"os"
 	"strings"
@@ -69,14 +69,14 @@ func NewDNSFailoverForwarder(ctx context.Context, options ...DNSForwarderOption)
 		opt(cfg)
 	}
 	if cfg.Address == "" {
-		return nil, fmt.Errorf("DNS forwarder address not specified")
+		return nil, errors.New("DNS forwarder address not specified")
 	}
 	address := cfg.Address
 	if !strings.Contains(address, ":") {
-		address = fmt.Sprintf("%s:53", address)
+		address = address + ":53"
 	}
 
-	dnsHandler := NewDnsHandler(
+	dnsHandler := NewDNSHandler(
 		WithTimeout(cfg.Timeout),
 	)
 

@@ -2,7 +2,7 @@ package dns
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"log/slog"
 	"net"
 	"path/filepath"
@@ -58,9 +58,8 @@ func GetUpstreamDNSFromFile(ctx context.Context, filename string) (<-chan Upstre
 			}
 		}()
 
-		prev := []string{}
 		ups := readUpstreams(filename)
-		prev = ups.Endpoints
+		prev := ups.Endpoints
 		ch <- ups
 		defer close(ch)
 		for {
@@ -69,7 +68,7 @@ func GetUpstreamDNSFromFile(ctx context.Context, filename string) (<-chan Upstre
 				if !ok {
 					ch <- UpstreamDNS{
 						Endpoints: nil,
-						Error:     fmt.Errorf("watcher closed"),
+						Error:     errors.New("watcher closed"),
 					}
 					return
 				}
@@ -85,7 +84,7 @@ func GetUpstreamDNSFromFile(ctx context.Context, filename string) (<-chan Upstre
 				if !ok {
 					ch <- UpstreamDNS{
 						Endpoints: nil,
-						Error:     fmt.Errorf("watcher error channel closed"),
+						Error:     errors.New("watcher error channel closed"),
 					}
 					return
 				}
