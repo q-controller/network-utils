@@ -1,6 +1,6 @@
 module github.com/q-controller/network-utils
 
-go 1.25.9
+go 1.25.10
 
 require (
 	github.com/coredhcp/coredhcp v0.0.0-20260110195901-da62c7b1bd56
