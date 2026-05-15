@@ -23,35 +23,32 @@ type DHCPConfig struct {
 
 type DHCPOption func(*DHCPConfig) error
 
-func WithInterface(ifaceName string, routerIP net.IP) DHCPOption {
+func WithRouter(routerIP net.IP) DHCPOption {
 	return func(cfg *DHCPConfig) error {
-		iface, ifaceErr := net.InterfaceByName(ifaceName)
-		if ifaceErr != nil {
-			return fmt.Errorf("failed to get interface %s: %w", ifaceName, ifaceErr)
+		ifaces, ifacesErr := net.Interfaces()
+		if ifacesErr != nil {
+			return fmt.Errorf("failed to list interfaces: %w", ifacesErr)
 		}
 
-		addrs, addrsErr := iface.Addrs()
-		if addrsErr != nil {
-			return fmt.Errorf("failed to get addresses for interface %s: %w", ifaceName, addrsErr)
-		}
-
-		var foundSubnet *net.IPNet
-		for _, addr := range addrs {
-			if ipNet, ok := addr.(*net.IPNet); ok && !ipNet.IP.IsLoopback() {
-				if ipNet.IP.To4() != nil && ipNet.IP.Equal(routerIP) {
+		for _, iface := range ifaces {
+			addrs, addrsErr := iface.Addrs()
+			if addrsErr != nil {
+				continue
+			}
+			for _, addr := range addrs {
+				ipNet, ok := addr.(*net.IPNet)
+				if !ok || ipNet.IP.IsLoopback() || ipNet.IP.To4() == nil {
+					continue
+				}
+				if ipNet.IP.Equal(routerIP) {
 					cfg.Router = routerIP
-					foundSubnet = ipNet
-					break
+					cfg.Subnet = ipNet
+					return nil
 				}
 			}
 		}
 
-		if foundSubnet == nil {
-			return fmt.Errorf("router IP %s not found as address on interface %s", routerIP.String(), ifaceName)
-		}
-
-		cfg.Subnet = foundSubnet
-		return nil
+		return fmt.Errorf("router IP %s not found on any host interface", routerIP.String())
 	}
 }
 
