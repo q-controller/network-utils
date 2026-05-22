@@ -106,6 +106,13 @@ func CreateTableFromConfig(conn *nftables.Conn, config TableConfig) error {
 			Family: config.Family,
 		}
 		conn.AddTable(table)
+		// Flush before adding chains: createChainsFromConfig -> NewChain
+		// calls conn.ListTables() which queries the kernel, and the kernel
+		// won't see this table until we flush. Without this, the very next
+		// chain-creation call returns "table <name> does not exist".
+		if err := conn.Flush(); err != nil {
+			return err
+		}
 	}
 
 	// Create chains

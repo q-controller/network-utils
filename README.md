@@ -5,18 +5,39 @@ A set of tools for easily creating network bridges and TAP interfaces, with a fo
 
 When configuring a bridge for communication, the following steps are performed to ensure traffic is not blocked by firewalls such as UFW:
 
-1. **Masquerading on the Host Interface:**
+1. **Ensure standard nftables tables exist:**
+    The `inet filter` and `ip nat` tables (with the standard `FORWARD`, `INPUT`, `OUTPUT`, `PREROUTING`, `POSTROUTING` chains) are created if missing. This makes the library work on pristine hosts (e.g. fresh cloud-init VMs) where no nftables ruleset has been populated yet. The operation is idempotent — existing tables on hosts where Docker, firewalld or iptables-nft has already created them are left untouched.
+
+2. **Masquerading on the Host Interface:**
     Network Address Translation (NAT) masquerading is applied to the host's outbound interface. This allows devices connected to the bridge to access the internet using the host's IP address, ensuring return traffic is properly routed back to the originating device.
 
-2. **Forwarding Rules for Outbound and Return Traffic:**
-    Dedicated forwarding rules are created to allow both outbound traffic from bridge-connected devices to the internet and return traffic from the internet back to those devices. This is essential for full bidirectional connectivity.
+3. **Reverse masquerading on the bridge-side interface:**
+    Connections initiated from outside the bridge subnet (host → VM, or external → VM via a route through this host) are SNAT'd to the bridge-side veth IP. The VM sees its directly-attached gateway as the source and can always reply; conntrack restores the original source on the way back out. Without this, the VM would try to reply directly to an external IP it has no route for, and the reply would be dropped somewhere along the path.
 
-3. **Allowing DHCP/DNS Traffic:**
+4. **Forwarding Rules for Outbound and Return Traffic:**
+    Dedicated forwarding rules are created to allow outbound traffic from bridge-connected devices to the internet and return traffic from the internet back to those devices. The return-traffic rule requires `ct state {established,related}`, so only replies to flows the bridge originated are accepted — unsolicited external→VM packets are not.
+
+5. **Allowing DHCP/DNS Traffic:**
     Rules are added to permit DHCP and DNS traffic, enabling devices on the bridge to obtain IP addresses and resolve domain names without restriction.
 
 To avoid conflicts and restrictions imposed by UFW (Uncomplicated Firewall, a popular Linux firewall management tool), these rules are not placed directly in the default `forward` or `input` chains. Instead, new dedicated chains are created, and traffic is explicitly jumped to these chains. These custom chains are inserted before the chains managed by UFW, ensuring that bridge-related traffic is handled correctly and not inadvertently blocked.
 
 This approach allows the software to provide robust and reliable bridge networking, bypassing common firewall limitations and enabling transparent communication between devices, the host, and the internet.
+
+### Operator prerequisites
+
+This library configures firewall rules but deliberately does **not** touch system-wide kernel knobs. The operator is responsible for setting:
+
+- **`net.ipv4.ip_forward=1`** — required for the host to route packets between the bridge and the uplink (i.e. for VMs to reach the internet, or for external hosts to reach VMs). Persist it via `/etc/sysctl.d/`:
+
+  ```
+  # /etc/sysctl.d/99-qcontroller.conf
+  net.ipv4.ip_forward = 1
+  ```
+
+  Apply without reboot: `sudo sysctl --system`.
+
+  This is left to the operator because `ip_forward` is a host-wide setting that affects every workload on the machine, and hardened hosts may have it disabled on purpose.
 
 ## Features
 
