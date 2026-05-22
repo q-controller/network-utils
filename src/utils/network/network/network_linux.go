@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/google/nftables"
 	"github.com/q-controller/network-utils/src/utils/network/firewall"
 	"github.com/q-controller/network-utils/src/utils/network/ifc"
 	"github.com/vishvananda/netlink"
@@ -19,13 +20,16 @@ func netName(name string) string {
 	return name + "-net"
 }
 
-func getRulesForInterface(iface, hostLink string, masquerade bool) (*firewall.Rules, error) {
+func getRulesForInterface(iface, hostLink string, vmSubnet *net.IPNet, masquerade bool) (*firewall.Rules, error) {
 	newRules := []firewall.NewRule{
 		firewall.ForwardOutboundRule("FORWARD", "filter", iface, hostLink),
 		firewall.ForwardReturnTrafficRule("FORWARD", "filter", iface, hostLink),
 	}
 	if masquerade {
-		newRules = append(newRules, firewall.MasqueradeRule("POSTROUTING", "nat", iface))
+		newRules = append(newRules,
+			firewall.MasqueradeRule("POSTROUTING", "nat", iface),
+			firewall.ReverseMasqueradeRule("POSTROUTING", "nat", hostLink, vmSubnet),
+		)
 	}
 	return firewall.NewRules(newRules...)
 }
@@ -59,7 +63,17 @@ func (n *networkLinux) Execute(fn func() error) error {
 }
 
 func (n *networkLinux) Connect(iface string, masquerade bool) error {
-	rules, rulesErr := getRulesForInterface(iface, hostName(n.config.Name), masquerade)
+	// On a pristine host (e.g. fresh cloud-init VM) the nftables ruleset is
+	// empty — no filter/nat tables, no FORWARD/POSTROUTING chains — and our
+	// rule installation would fail with "table filter does not exist".
+	// EnsureStandardFirewallInfrastructure is idempotent, so a hot host
+	// where Docker/firewalld/iptables-nft has already populated the tables
+	// is unaffected.
+	if err := firewall.EnsureStandardFirewallInfrastructure(&nftables.Conn{}); err != nil {
+		return fmt.Errorf("failed to ensure standard firewall tables: %w", err)
+	}
+
+	rules, rulesErr := getRulesForInterface(iface, hostName(n.config.Name), n.config.Subnet, masquerade)
 	if rulesErr != nil {
 		return rulesErr
 	}
@@ -71,7 +85,7 @@ func (n *networkLinux) Connect(iface string, masquerade bool) error {
 }
 
 func (n *networkLinux) Disconnect(iface string, masquerade bool) error {
-	rules, rulesErr := getRulesForInterface(iface, hostName(n.config.Name), masquerade)
+	rules, rulesErr := getRulesForInterface(iface, hostName(n.config.Name), n.config.Subnet, masquerade)
 	if rulesErr != nil {
 		return rulesErr
 	}
