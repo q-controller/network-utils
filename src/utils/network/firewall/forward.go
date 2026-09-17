@@ -14,6 +14,7 @@ func ForwardOutboundRule(chainName, tableName, hostIf, internalIf string) NewRul
 		chain, table, chainErr := NewChain(
 			WithName(chainName),
 			WithinTable(tableName),
+			withStandardFamily(tableName),
 		)
 		if chainErr != nil {
 			return chainErr
@@ -46,6 +47,7 @@ func ForwardReturnTrafficRule(chainName, tableName, hostIf, internalIf string) N
 		chain, table, chainErr := NewChain(
 			WithName(chainName),
 			WithinTable(tableName),
+			withStandardFamily(tableName),
 		)
 		if chainErr != nil {
 			return chainErr

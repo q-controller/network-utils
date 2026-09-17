@@ -21,11 +21,23 @@ const (
 	PostRoutingChain = "POSTROUTING"
 )
 
+// standardTableFamily returns the family a standard table is created in, so
+// rule builders resolve the same table the chains were made in.
+func standardTableFamily(tableName string) *nftables.TableFamily {
+	switch tableName {
+	case FilterTable:
+		return &StandardFilterTable.Family
+	case NATTable:
+		return &StandardNATTable.Family
+	}
+	return nil
+}
+
 // Predefined standard table configurations
 var (
 	StandardFilterTable = TableConfig{
 		Name:   FilterTable,
-		Family: nftables.TableFamilyINet,
+		Family: nftables.TableFamilyIPv4,
 		Chains: []ChainConfig{
 			{
 				Name:     InputChain,
@@ -150,6 +162,7 @@ func createChainsFromConfig(conn *nftables.Conn, table *nftables.Table, chainCon
 		opts := []Option{
 			WithName(chainConfig.Name),
 			WithinTable(table.Name),
+			WithFamily(table.Family),
 		}
 
 		// Add creation options if this is for chain creation
