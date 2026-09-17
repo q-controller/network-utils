@@ -16,6 +16,7 @@ func MasqueradeRule(chainName, tableName, interfaceName string) NewRule {
 		chain, table, chainErr := NewChain(
 			WithName(chainName),
 			WithinTable(tableName),
+			withStandardFamily(tableName),
 		)
 		if chainErr != nil {
 			return chainErr
@@ -61,6 +62,7 @@ func ReverseMasqueradeRule(chainName, tableName, hostLink string, vmSubnet *net.
 		chain, table, chainErr := NewChain(
 			WithName(chainName),
 			WithinTable(tableName),
+			withStandardFamily(tableName),
 		)
 		if chainErr != nil {
 			return chainErr

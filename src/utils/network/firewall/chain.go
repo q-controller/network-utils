@@ -13,6 +13,7 @@ import (
 type ChainConfig struct {
 	Name   string
 	Table  string
+	Family *nftables.TableFamily // nil: match the table by name only
 	Create bool
 	// Rich configuration options (optional - for creating new chains)
 	Type     *nftables.ChainType
@@ -41,49 +42,56 @@ func NewChain(opts ...Option) (*nftables.Chain, *nftables.Table, error) {
 	}
 
 	for _, table := range tables {
-		if table.Name == config.Table {
-			// Table exists, use it
-			chains, chainsErr := conn.ListChains()
-			if chainsErr != nil {
-				return nil, nil, chainsErr
-			}
-
-			for _, ch := range chains {
-				if ch.Name == config.Name {
-					return ch, table, nil // Chain already exists, return it
-				}
-			}
-
-			if config.Create {
-				// Chain does not exist, create it
-				customChain := &nftables.Chain{
-					Name:  config.Name,
-					Table: table,
-				}
-
-				// Apply rich configuration if provided
-				if config.Type != nil {
-					customChain.Type = *config.Type
-				}
-				if config.Hook != nil {
-					customChain.Hooknum = config.Hook
-				}
-				if config.Priority != nil {
-					customChain.Priority = config.Priority
-				}
-				if config.Policy != nil {
-					customChain.Policy = config.Policy
-				}
-
-				customChain = conn.AddChain(customChain)
-				if err := conn.Flush(); err != nil {
-					return nil, nil, err
-				}
-				return customChain, table, nil // New chain created
-			}
-
-			return nil, nil, fmt.Errorf("chain %s does not exist in table %s", config.Name, config.Table)
+		if table.Name != config.Table {
+			continue
 		}
+		if config.Family != nil && table.Family != *config.Family {
+			continue
+		}
+		// Table exists, use it
+		chains, chainsErr := conn.ListChains()
+		if chainsErr != nil {
+			return nil, nil, chainsErr
+		}
+
+		for _, ch := range chains {
+			// ListChains spans every table; the same chain name exists in
+			// several (e.g. FORWARD), so match the table too.
+			if ch.Name == config.Name && ch.Table != nil &&
+				ch.Table.Name == table.Name && ch.Table.Family == table.Family {
+				return ch, table, nil // Chain already exists, return it
+			}
+		}
+
+		if config.Create {
+			// Chain does not exist, create it
+			customChain := &nftables.Chain{
+				Name:  config.Name,
+				Table: table,
+			}
+
+			// Apply rich configuration if provided
+			if config.Type != nil {
+				customChain.Type = *config.Type
+			}
+			if config.Hook != nil {
+				customChain.Hooknum = config.Hook
+			}
+			if config.Priority != nil {
+				customChain.Priority = config.Priority
+			}
+			if config.Policy != nil {
+				customChain.Policy = config.Policy
+			}
+
+			customChain = conn.AddChain(customChain)
+			if err := conn.Flush(); err != nil {
+				return nil, nil, err
+			}
+			return customChain, table, nil // New chain created
+		}
+
+		return nil, nil, fmt.Errorf("chain %s does not exist in table %s", config.Name, config.Table)
 	}
 
 	return nil, nil, fmt.Errorf("table %s does not exist", config.Table)
@@ -98,6 +106,20 @@ func WithName(chainName string) Option {
 func WithinTable(tableName string) Option {
 	return func(config *ChainConfig) {
 		config.Table = tableName // Set the table name for the chain
+	}
+}
+
+func WithFamily(family nftables.TableFamily) Option {
+	return func(config *ChainConfig) {
+		config.Family = &family
+	}
+}
+
+// withStandardFamily pins the family for the standard tables and is a no-op
+// (name-only match) for any other table name.
+func withStandardFamily(tableName string) Option {
+	return func(config *ChainConfig) {
+		config.Family = standardTableFamily(tableName)
 	}
 }
 
