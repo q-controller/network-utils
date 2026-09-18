@@ -24,9 +24,7 @@ func (NetlinkBridgeManager) AddLink(name string, linkType LinkType) error {
 	case LinkTypeTap:
 		link = &netlink.Tuntap{
 			Mode: netlink.TUNTAP_MODE_TAP,
-			LinkAttrs: netlink.LinkAttrs{
-				Name: name,
-			},
+			Name: name,
 		}
 	default:
 		return fmt.Errorf("unsupported link type: %s", linkType)
@@ -47,8 +45,7 @@ func (NetlinkBridgeManager) SetIP(name string, ip net.IP, mask net.IPMask) error
 
 func (NetlinkBridgeManager) Exists(name string) (bool, error) {
 	if _, linkErr := netlink.LinkByName(name); linkErr != nil {
-		var linkNotFoundError netlink.LinkNotFoundError
-		if errors.As(linkErr, &linkNotFoundError) {
+		if _, ok := errors.AsType[netlink.LinkNotFoundError](linkErr); ok {
 			return false, nil
 		}
 		return false, fmt.Errorf("error checking if link exists: %w", linkErr)
@@ -97,8 +94,7 @@ func (NetlinkBridgeManager) HasIP(name string, ip net.IP, mask net.IPMask) (bool
 func (NetlinkBridgeManager) DeleteLink(name string) error {
 	link, linkErr := netlink.LinkByName(name)
 	if linkErr != nil {
-		var linkNotFoundError netlink.LinkNotFoundError
-		if errors.As(linkErr, &linkNotFoundError) {
+		if _, ok := errors.AsType[netlink.LinkNotFoundError](linkErr); ok {
 			return nil // Link does not exist, nothing to delete
 		}
 		return linkErr
@@ -107,7 +103,7 @@ func (NetlinkBridgeManager) DeleteLink(name string) error {
 }
 
 func (NetlinkBridgeManager) DisableTxOffloading(name string) error {
-	cmd := exec.Command("ethtool", "-K", name, "tx", "off")
+	cmd := exec.Command("ethtool", "-K", name, "tx", "off") //nolint:gosec // G204: argv, no shell; name is a kernel-accepted link
 	return cmd.Run()
 }
 

@@ -1,5 +1,4 @@
 //go:build linux
-// +build linux
 
 package firewall
 
@@ -69,7 +68,7 @@ func ReverseMasqueradeRule(chainName, tableName, hostLink string, vmSubnet *net.
 		}
 
 		network := make([]byte, net.IPv4len)
-		for i := 0; i < net.IPv4len; i++ {
+		for i := range net.IPv4len {
 			network[i] = ipv4[i] & vmSubnet.Mask[i]
 		}
 
